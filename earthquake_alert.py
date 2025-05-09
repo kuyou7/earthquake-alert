@@ -10,12 +10,10 @@ Original file is located at
 import requests
 import xml.etree.ElementTree as ET
 import time
-!pip install gTTS
 from gtts import gTTS
 from IPython.display import display, Audio
 import ipywidgets as widgets
 from ipywidgets import interact
-!pip install streamlit
 import streamlit as st
 st.title ("地震速報アプリ")
 st.write("ここに地震情報を表示します")
