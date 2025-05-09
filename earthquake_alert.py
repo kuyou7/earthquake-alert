@@ -19,9 +19,6 @@ st.write("ここに地震情報を表示します")
 # 気象庁 地震速報フィードURL
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
-# 直前に取得した速報タイトル（重複防止用）
-last_earthquake_title = ""
-
 # 行動指示辞書
 actions = {
     1: "安全を確保してください。テーブルや丈夫な物の下に隠れてください。",
@@ -30,25 +27,8 @@ actions = {
 }
 
 # 現在の行動ステップ
-current_step = 1
-
-# ボタンのクリックで次のステップに進む
-def next_step():
-    global current_step
-    if current_step < 3:
-        current_step += 1
-    else:
-        print("全ての行動指示が完了しました。")
-
-    # 音声で行動指示を読み上げる
-    action_message = actions.get(current_step, "行動指示がありません。")
-    tts = gTTS(text=action_message, lang='ja')
-    tts.save("action.mp3")
-
-    # 音声再生
-    st.audio("action.mp3", autoplay=True)
-    # 行動指示を表示
-    st.write(action_message)
+if 'current_step' not in st.session_state:
+    st.session_state.current_step = 1
 
 # 地震速報を取得する関数
 def fetch_latest_earthquake_info():
@@ -66,12 +46,27 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
+# ボタンのクリックで次のステップに進む
+def next_step():
+    if st.session_state.current_step < 3:
+        st.session_state.current_step += 1
+    else:
+        print("全ての行動指示が完了しました。")
+
+    # 音声で行動指示を読み上げる
+    action_message = actions.get(st.session_state.current_step, "行動指示がありません。")
+    tts = gTTS(text=action_message, lang='ja')
+    tts.save("action.mp3")
+
+    # 音声再生
+    st.audio("action.mp3", autoplay=True)
+    # 行動指示を表示
+    st.write(action_message)
+
 # 地震速報を検知してユーザーにアラートを出す関数
 def alert_user(title, link, description):
-    global current_step
-
     # 最初の行動指示を読み上げ
-    action_message = actions.get(current_step, "行動指示がありません。")
+    action_message = actions.get(st.session_state.current_step, "行動指示がありません。")
     tts = gTTS(text=action_message, lang='ja')
     tts.save("earthquake_alert.mp3")
 
@@ -90,7 +85,7 @@ def alert_user(title, link, description):
 
 # 地震速報を監視する関数
 def monitor_earthquakes():
-    global last_earthquake_title
+    last_earthquake_title = st.session_state.get("last_earthquake_title", "")
 
     st.write("地震速報の監視を開始します...")
 
@@ -102,7 +97,7 @@ def monitor_earthquakes():
                 if "震度速報" in title or "震源情報" in title:
                     st.write(f"⚡地震発生検知！ {title}")
                     alert_user(title, link, description)
-                    last_earthquake_title = title
+                    st.session_state.last_earthquake_title = title
                 else:
                     st.write(f"取得しましたが対象外: {title}")
             else:
@@ -112,7 +107,8 @@ def monitor_earthquakes():
 
         # 10秒ごとに再実行して更新
         time.sleep(10)
-        st.experimental_rerun()  # ページをリロードして更新
+        # 画面を更新
+        st.experimental_rerun()  # 再実行
 
 if __name__ == "__main__":
     monitor_earthquakes()
