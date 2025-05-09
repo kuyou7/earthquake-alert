@@ -105,10 +105,14 @@ def monitor_earthquakes():
         else:
             st.write("地震情報を取得できませんでした")
 
-        # 10秒ごとに再実行して更新
+        # 10秒ごとに情報を更新
         time.sleep(10)
-        # 画面を更新
-        st.experimental_rerun()  # 再実行
+        
+        # ボタンを使って手動で更新するように変更
+        if st.button("地震情報を更新"):
+            st.experimental_rerun()  # ページを手動で更新
+            break
 
 if __name__ == "__main__":
     monitor_earthquakes()
+
