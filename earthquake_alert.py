@@ -13,7 +13,7 @@ import time
 from gtts import gTTS
 import streamlit as st
 
-st.title ("地震速報アプリ")
+st.title("地震速報アプリ")
 st.write("ここに地震情報を表示します")
 
 # 気象庁 地震速報フィードURL
@@ -112,7 +112,7 @@ def monitor_earthquakes():
 
         # 10秒ごとに再実行して更新
         time.sleep(10)
-        st.experimental_rerun()
+        st.experimental_rerun()  # ページをリロードして更新
 
 if __name__ == "__main__":
     monitor_earthquakes()
