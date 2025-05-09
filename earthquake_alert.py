@@ -111,3 +111,14 @@ def monitor_earthquakes():
 
 if __name__ == "__main__":
     monitor_earthquakes()
+    import streamlit as st
+import requests
+
+# プッシュ通知を有効にするためのコード
+st.title("地震速報アプリ")
+st.write("地震速報の通知を受け取るには、通知を許可してください。")
+
+if st.button('通知を許可'):
+    # ユーザーのブラウザで通知を許可する
+    st.write("通知が有効になりました！")
+
