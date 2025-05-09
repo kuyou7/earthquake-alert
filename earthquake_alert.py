@@ -87,21 +87,25 @@ def alert_user(title, link, description):
 def monitor_earthquakes():
     last_earthquake_title = st.session_state.get("last_earthquake_title", "")
 
-    if st.button("地震情報を更新"):
-        title, link, pubDate, description = fetch_latest_earthquake_info()
+    # 自動で地震情報を更新
+    title, link, pubDate, description = fetch_latest_earthquake_info()
 
-        if title:  # titleがNoneでない場合のみ処理を行う
-            if title != last_earthquake_title:
-                if "震度速報" in title or "震源情報" in title:
-                    st.write(f"⚡地震発生検知！ {title}")
-                    alert_user(title, link, description)
-                    st.session_state.last_earthquake_title = title
-                else:
-                    st.write(f"取得しましたが対象外: {title}")
+    if title:  # titleがNoneでない場合のみ処理を行う
+        if title != last_earthquake_title:
+            if "震度速報" in title or "震源情報" in title:
+                st.write(f"⚡地震発生検知！ {title}")
+                alert_user(title, link, description)
+                st.session_state.last_earthquake_title = title
             else:
-                st.write("新しい地震速報なし")
+                st.write(f"取得しましたが対象外: {title}")
         else:
-            st.write("地震情報を取得できませんでした")
+            st.write("新しい地震速報なし")
+    else:
+        st.write("地震情報を取得できませんでした")
+
+    # 5秒ごとに再実行して自動更新
+    time.sleep(5)
+    st.experimental_rerun()
 
 if __name__ == "__main__":
     monitor_earthquakes()
