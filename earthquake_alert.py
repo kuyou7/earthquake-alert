@@ -12,9 +12,7 @@ import xml.etree.ElementTree as ET
 import time
 from gtts import gTTS
 import streamlit as st
-import ipywidgets as widgets
-from ipywidgets import interact
-import streamlit as st
+
 st.title ("地震速報アプリ")
 st.write("ここに地震情報を表示します")
 
@@ -35,7 +33,7 @@ actions = {
 current_step = 1
 
 # ボタンのクリックで次のステップに進む
-def next_step(button):
+def next_step():
     global current_step
     if current_step < 3:
         current_step += 1
@@ -48,9 +46,9 @@ def next_step(button):
     tts.save("action.mp3")
 
     # 音声再生
-st.audio("action.mp3", autoplay=True)
+    st.audio("action.mp3", autoplay=True)
     # 行動指示を表示
-print(action_message)
+    st.write(action_message)
 
 # 地震速報を取得する関数
 def fetch_latest_earthquake_info():
@@ -81,34 +79,33 @@ def alert_user(title, link, description):
     st.audio("earthquake_alert.mp3", autoplay=True)
 
     # 行動指示を表示
-    print(f"地震速報: {title}")
-    print(f"詳細: {description}")
-    print(f"リンク: {link}")
-    print(f"行動指示: {action_message}")
+    st.write(f"地震速報: {title}")
+    st.write(f"詳細: {description}")
+    st.write(f"リンク: {link}")
+    st.write(f"行動指示: {action_message}")
 
     # ボタンを表示して次の行動へ進む
-    button = widgets.Button(description="次の行動")
-    button.on_click(next_step)
-    display(button)
+    if st.button("次の行動"):
+        next_step()
 
 # 地震速報を監視する関数
 def monitor_earthquakes():
     global last_earthquake_title
 
-    print("地震速報の監視を開始します...")
+    st.write("地震速報の監視を開始します...")
 
     while True:
         title, link, pubDate, description = fetch_latest_earthquake_info()
 
         if title and title != last_earthquake_title:
             if "震度速報" in title or "震源情報" in title:
-                print(f"⚡地震発生検知！ {title}")
+                st.write(f"⚡地震発生検知！ {title}")
                 alert_user(title, link, description)
                 last_earthquake_title = title
             else:
-                print(f"取得しましたが対象外: {title}")
+                st.write(f"取得しましたが対象外: {title}")
         else:
-            print("新しい地震速報なし")
+            st.write("新しい地震速報なし")
 
         # 30秒ごとにチェック
         time.sleep(10)
