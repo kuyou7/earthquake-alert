@@ -50,7 +50,7 @@ def next_step(button):
     # 音声再生
 st.audio("action.mp3", autoplay=True)
     # 行動指示を表示
-    print(action_message)
+print(action_message)
 
 # 地震速報を取得する関数
 def fetch_latest_earthquake_info():
