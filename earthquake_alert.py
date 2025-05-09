@@ -78,7 +78,7 @@ def alert_user(title, link, description):
     tts.save("earthquake_alert.mp3")
 
     # 音声再生
-    st.audio("earthquake_alert.mp3", autoplay=True))
+    st.audio("earthquake_alert.mp3", autoplay=True)
 
     # 行動指示を表示
     print(f"地震速報: {title}")
