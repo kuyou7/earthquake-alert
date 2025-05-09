@@ -87,9 +87,7 @@ def alert_user(title, link, description):
 def monitor_earthquakes():
     last_earthquake_title = st.session_state.get("last_earthquake_title", "")
 
-    st.write("地震速報の監視を開始します...")
-
-    while True:
+    if st.button("地震情報を更新"):
         title, link, pubDate, description = fetch_latest_earthquake_info()
 
         if title:  # titleがNoneでない場合のみ処理を行う
@@ -105,14 +103,5 @@ def monitor_earthquakes():
         else:
             st.write("地震情報を取得できませんでした")
 
-        # 10秒ごとに情報を更新
-        time.sleep(10)
-        
-        # ボタンを使って手動で更新するように変更
-        if st.button("地震情報を更新"):
-            st.experimental_rerun()  # ページを手動で更新
-            break
-
 if __name__ == "__main__":
     monitor_earthquakes()
-
