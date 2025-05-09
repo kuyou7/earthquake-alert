@@ -11,7 +11,7 @@ import requests
 import xml.etree.ElementTree as ET
 import time
 from gtts import gTTS
-from IPython.display import display, Audio
+import streamlit as st
 import ipywidgets as widgets
 from ipywidgets import interact
 import streamlit as st
@@ -48,8 +48,7 @@ def next_step(button):
     tts.save("action.mp3")
 
     # 音声再生
-    display(Audio("action.mp3", autoplay=True))
-
+st.audio("action.mp3", autoplay=True)
     # 行動指示を表示
     print(action_message)
 
