@@ -57,5 +57,62 @@ def fetch_latest_earthquake_info():
         response.raise_for_status()
         root = ET.fromstring(response.content)
         first_entry = root.find('channel/item')
-        title =
+        title = first_entry.find('title').text if first_entry.find('title') is not None else None
+        link = first_entry.find('link').text if first_entry.find('link') is not None else None
+        pubDate = first_entry.find('pubDate').text if first_entry.find('pubDate') is not None else None
+        description = first_entry.find('description').text if first_entry.find('description') is not None else None
+        return title, link, pubDate, description
+    except Exception as e:
+        print(f"地震情報取得失敗: {e}")
+        return None, None, None, None
 
+# 地震速報を検知してユーザーにアラートを出す関数
+def alert_user(title, link, description):
+    global current_step
+
+    # 最初の行動指示を読み上げ
+    action_message = actions.get(current_step, "行動指示がありません。")
+    tts = gTTS(text=action_message, lang='ja')
+    tts.save("earthquake_alert.mp3")
+
+    # 音声再生
+    st.audio("earthquake_alert.mp3", autoplay=True)
+
+    # 行動指示を表示
+    st.write(f"地震速報: {title}")
+    st.write(f"詳細: {description}")
+    st.write(f"リンク: {link}")
+    st.write(f"行動指示: {action_message}")
+
+    # ボタンを表示して次の行動へ進む
+    if st.button("次の行動"):
+        next_step()
+
+# 地震速報を監視する関数
+def monitor_earthquakes():
+    global last_earthquake_title
+
+    st.write("地震速報の監視を開始します...")
+
+    while True:
+        title, link, pubDate, description = fetch_latest_earthquake_info()
+
+        if title:  # titleがNoneでない場合のみ処理を行う
+            if title != last_earthquake_title:
+                if "震度速報" in title or "震源情報" in title:
+                    st.write(f"⚡地震発生検知！ {title}")
+                    alert_user(title, link, description)
+                    last_earthquake_title = title
+                else:
+                    st.write(f"取得しましたが対象外: {title}")
+            else:
+                st.write("新しい地震速報なし")
+        else:
+            st.write("地震情報を取得できませんでした")
+
+        # 10秒ごとに再実行して更新
+        time.sleep(10)
+        st.experimental_rerun()
+
+if __name__ == "__main__":
+    monitor_earthquakes()
