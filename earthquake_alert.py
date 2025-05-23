@@ -58,14 +58,13 @@ if 'last_update_time' not in st.session_state:
 msg = messages[st.session_state.lang]
 actions = msg['actions']
 
-# 言語切替
+# 言語切替関数（再読み込みは関数外で）
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
     st.session_state.current_step = 1
     st.session_state.last_earthquake_title = ""
-    st.experimental_rerun()
 
-# 地震情報取得
+# 地震情報取得URL
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
 def fetch_latest_earthquake_info():
@@ -85,7 +84,6 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
-# 行動ステップ更新
 def next_step():
     if st.session_state.current_step < 3:
         st.session_state.current_step += 1
@@ -101,17 +99,21 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
-# メイン処理
+# UI表示
+
 st.title(msg['title'])
 st.write(msg['description'])
 
+# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
+    st.experimental_rerun()
 
+# 通知許可ボタン（今はダミー）
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
 
-# 5秒に1回のみ更新する処理
+# 5秒ごとに地震情報を更新
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
     st.session_state.last_update_time = current_time
@@ -141,7 +143,7 @@ if current_time - st.session_state.last_update_time > 5:
         else:
             st.info(msg['no_new_alert'])
 else:
-    # 5秒経過しないときは前の情報だけ表示
+    # 5秒経ってなければ前の情報だけ表示
     if st.session_state.last_earthquake_title:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
