@@ -3,9 +3,9 @@ import requests
 import xml.etree.ElementTree as ET
 from gtts import gTTS
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
+import time
 
-# 言語ごとのメッセージ辞書
+# --- メッセージ辞書 ---
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -22,7 +22,8 @@ messages = {
         'no_new_alert': "新しい地震速報なし",
         'fetch_error': "地震情報を取得できませんでした",
         'excluded_alert': "取得しましたが対象外: ",
-        'toggle_button': "English / 日本語切替"
+        'toggle_button': "English / 日本語切替",
+        'no_action': "行動指示がありません。"
     },
     'en': {
         'title': "Earthquake Alert App",
@@ -39,52 +40,42 @@ messages = {
         'no_new_alert': "No new earthquake alerts",
         'fetch_error': "Could not fetch earthquake information",
         'excluded_alert': "Fetched but excluded: ",
-        'toggle_button': "English / 日本語 Toggle"
+        'toggle_button': "English / 日本語 Toggle",
+        'no_action': "No action instructions."
     }
 }
 
-# 気象庁 地震速報フィードURL
-JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
-
-# セッションステート初期化
+# --- 初期化 ---
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ja'
-
 if 'current_step' not in st.session_state:
     st.session_state.current_step = 1
-
 if 'last_earthquake_title' not in st.session_state:
     st.session_state.last_earthquake_title = ""
-
-# 言語切替関数
-def toggle_language():
-    st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
-
-# 自動更新設定（5秒ごと）
-st_autorefresh(interval=5 * 1000, key="earthquake_refresh")
+if 'last_update_time' not in st.session_state:
+    st.session_state.last_update_time = 0
 
 msg = messages[st.session_state.lang]
 actions = msg['actions']
 
-# 言語切替ボタン
-if st.button(msg['toggle_button'], key='toggle_lang'):
-    toggle_language()
-    st.experimental_rerun()  # 言語切替時に即時更新
+# --- 言語切替 ---
+def toggle_language():
+    st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
+    st.session_state.current_step = 1
+    st.session_state.last_earthquake_title = ""
+    st.experimental_rerun()
 
-# ページ表示
-st.title(msg['title'])
-st.write(msg['description'])
-
-# 通知許可ボタン
-if st.button(msg['notify_button'], key='notify_button'):
-    st.write(msg['notify_enabled'])
+# --- 地震情報取得 ---
+JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
 def fetch_latest_earthquake_info():
     try:
-        response = requests.get(JMA_EARTHQUAKE_FEED_URL)
+        response = requests.get(JMA_EARTHQUAKE_FEED_URL, timeout=5)
         response.raise_for_status()
         root = ET.fromstring(response.content)
         first_entry = root.find('channel/item')
+        if first_entry is None:
+            return None, None, None, None
         title = first_entry.find('title').text if first_entry.find('title') is not None else None
         link = first_entry.find('link').text if first_entry.find('link') is not None else None
         pubDate = first_entry.find('pubDate').text if first_entry.find('pubDate') is not None else None
@@ -94,47 +85,72 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
+# --- 行動ステップ更新 ---
 def next_step():
     if st.session_state.current_step < 3:
         st.session_state.current_step += 1
     else:
-        st.write(msg['all_actions_done'])
+        st.info(msg['all_actions_done'])
 
-    action_message = actions.get(st.session_state.current_step, "No action instructions." if st.session_state.lang == 'en' else "行動指示がありません。")
+def speak_text(text):
+    try:
+        lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
+        tts = gTTS(text=text, lang=lang_code)
+        tts.save("action.mp3")
+        st.audio("action.mp3", autoplay=True)
+    except Exception as e:
+        st.error(f"音声再生に失敗しました: {e}")
 
-    tts = gTTS(text=action_message, lang='en' if st.session_state.lang == 'en' else 'ja')
-    tts.save("action.mp3")
+# --- メイン処理 ---
 
-    st.audio("action.mp3", autoplay=True)
-    st.write(action_message)
+# ページタイトルと説明
+st.title(msg['title'])
+st.write(msg['description'])
 
-def alert_user(title, link, description):
-    action_message = actions.get(st.session_state.current_step, "No action instructions." if st.session_state.lang == 'en' else "行動指示がありません。")
+# 言語切替ボタン
+if st.button(msg['toggle_button']):
+    toggle_language()
 
-    tts = gTTS(text=action_message, lang='en' if st.session_state.lang == 'en' else 'ja')
-    tts.save("earthquake_alert.mp3")
+# 通知許可ボタン
+if st.button(msg['notify_button']):
+    st.success(msg['notify_enabled'])
 
-    st.audio("earthquake_alert.mp3", autoplay=True)
+# 5秒に1回だけ更新処理を行う（キャッシュ的な）
+current_time = time.time()
+if current_time - st.session_state.last_update_time > 5:
+    st.session_state.last_update_time = current_time
+    title, link, pubDate, description = fetch_latest_earthquake_info()
 
-    st.write(f"⚡ {title}")
-    st.write(description)
-    st.write(link)
-    st.write(action_message)
-
-    if st.button(msg['next_action'], key='next_action'):
-        next_step()
-
-# 地震速報1回取得
-title, link, pubDate, description = fetch_latest_earthquake_info()
-
-if title:
-    if title != st.session_state.last_earthquake_title:
-        if "震度速報" in title or "震源情報" in title:
-            alert_user(title, link, description)
-            st.session_state.last_earthquake_title = title
-        else:
-            st.write(msg['excluded_alert'] + title)
+    if title is None:
+        st.warning(msg['fetch_error'])
     else:
-        st.write(msg['no_new_alert'])
+        if title != st.session_state.last_earthquake_title:
+            if "震度速報" in title or "震源情報" in title:
+                st.session_state.last_earthquake_title = title
+                action_message = actions.get(st.session_state.current_step, msg['no_action'])
+                # 地震情報表示
+                st.markdown(f"### ⚡ {title}")
+                st.write(description)
+                st.write(f"[詳細リンク]({link})")
+                st.write(f"**{action_message}**")
+                speak_text(action_message)
+
+                # 「次の行動」ボタン
+                if st.button(msg['next_action']):
+                    next_step()
+                    # 行動更新後の音声再生
+                    action_message = actions.get(st.session_state.current_step, msg['no_action'])
+                    speak_text(action_message)
+                    st.write(action_message)
+            else:
+                st.info(msg['excluded_alert'] + title)
+        else:
+            st.info(msg['no_new_alert'])
+
 else:
-    st.write(msg['fetch_error'])
+    # 5秒間隔の間は前の情報を表示だけしておく
+    if st.session_state.last_earthquake_title:
+        st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
+        st.write("最新の地震情報を監視中...")
+    else:
+        st.write(msg['description'])
