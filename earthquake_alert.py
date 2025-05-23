@@ -10,6 +10,7 @@ messages = {
     'ja': {
         'title': "地震速報アプリ",
         'description': "ここに地震情報を表示します",
+        'no_quake': "地震は確認されませんでした。",
         'notify_button': "通知を許可",
         'notify_enabled': "通知が有効になりました！",
         'next_action': "次の行動",
@@ -23,12 +24,12 @@ messages = {
         'fetch_error': "地震情報を取得できませんでした",
         'excluded_alert': "取得しましたが対象外: ",
         'toggle_button': "English / 日本語切替",
-        'no_action': "行動指示がありません。",
-        'no_earthquake_detected': "地震は確認されませんでした。"
+        'no_action': "行動指示がありません。"
     },
     'en': {
         'title': "Earthquake Alert App",
         'description': "Earthquake information will be displayed here.",
+        'no_quake': "No earthquake was detected.",
         'notify_button': "Allow Notifications",
         'notify_enabled': "Notifications have been enabled!",
         'next_action': "Next Action",
@@ -42,8 +43,7 @@ messages = {
         'fetch_error': "Could not fetch earthquake information",
         'excluded_alert': "Fetched but excluded: ",
         'toggle_button': "English / 日本語 Toggle",
-        'no_action': "No action instructions.",
-        'no_earthquake_detected': "No earthquakes detected."
+        'no_action': "No action instructions."
     }
 }
 
@@ -102,14 +102,17 @@ def toggle_language():
 # UI表示
 st.title(msg['title'])
 
-# 言語切替ボタン（ここでのみst.experimental_rerun呼び出し）
+# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
-    st.experimental_rerun()
+    st.rerun()
 
-# 通知許可ボタン（ダミー表示）
+# 通知許可ボタン
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
+
+# 地震情報表示領域
+quake_displayed = False
 
 # 5秒間隔の地震情報更新処理
 current_time = time.time()
@@ -118,7 +121,7 @@ if current_time - st.session_state.last_update_time > 5:
     title, link, pubDate, description = fetch_latest_earthquake_info()
 
     if title is None:
-        st.warning(msg['no_earthquake_detected'])
+        st.warning(msg['fetch_error'])
     else:
         if title != st.session_state.last_earthquake_title:
             if "震度速報" in title or "震源情報" in title:
@@ -130,6 +133,7 @@ if current_time - st.session_state.last_update_time > 5:
                 st.write(f"[詳細リンク]({link})")
                 st.write(f"**{action_message}**")
                 speak_text(action_message)
+                quake_displayed = True
 
                 if st.button(msg['next_action']):
                     next_step()
@@ -141,8 +145,12 @@ if current_time - st.session_state.last_update_time > 5:
         else:
             st.info(msg['no_new_alert'])
 else:
+    # 5秒経っていないとき
     if st.session_state.last_earthquake_title:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
-    else:
-        st.warning(msg['no_earthquake_detected'])
+        quake_displayed = True
+
+# 表示されていなければ説明文または「確認されませんでした」表示
+if not quake_displayed:
+    st.write(msg['no_quake'])
