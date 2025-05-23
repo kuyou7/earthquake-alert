@@ -5,7 +5,7 @@ from gtts import gTTS
 import streamlit as st
 import time
 
-# --- メッセージ辞書 ---
+# メッセージ辞書
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -45,7 +45,7 @@ messages = {
     }
 }
 
-# --- 初期化 ---
+# 初期化
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ja'
 if 'current_step' not in st.session_state:
@@ -58,14 +58,14 @@ if 'last_update_time' not in st.session_state:
 msg = messages[st.session_state.lang]
 actions = msg['actions']
 
-# --- 言語切替 ---
+# 言語切替
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
     st.session_state.current_step = 1
     st.session_state.last_earthquake_title = ""
     st.experimental_rerun()
 
-# --- 地震情報取得 ---
+# 地震情報取得
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
 def fetch_latest_earthquake_info():
@@ -85,7 +85,7 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
-# --- 行動ステップ更新 ---
+# 行動ステップ更新
 def next_step():
     if st.session_state.current_step < 3:
         st.session_state.current_step += 1
@@ -101,21 +101,17 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
-# --- メイン処理 ---
-
-# ページタイトルと説明
+# メイン処理
 st.title(msg['title'])
 st.write(msg['description'])
 
-# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
 
-# 通知許可ボタン
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
 
-# 5秒に1回だけ更新処理を行う（キャッシュ的な）
+# 5秒に1回のみ更新する処理
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
     st.session_state.last_update_time = current_time
@@ -128,17 +124,15 @@ if current_time - st.session_state.last_update_time > 5:
             if "震度速報" in title or "震源情報" in title:
                 st.session_state.last_earthquake_title = title
                 action_message = actions.get(st.session_state.current_step, msg['no_action'])
-                # 地震情報表示
+
                 st.markdown(f"### ⚡ {title}")
                 st.write(description)
                 st.write(f"[詳細リンク]({link})")
                 st.write(f"**{action_message}**")
                 speak_text(action_message)
 
-                # 「次の行動」ボタン
                 if st.button(msg['next_action']):
                     next_step()
-                    # 行動更新後の音声再生
                     action_message = actions.get(st.session_state.current_step, msg['no_action'])
                     speak_text(action_message)
                     st.write(action_message)
@@ -146,9 +140,8 @@ if current_time - st.session_state.last_update_time > 5:
                 st.info(msg['excluded_alert'] + title)
         else:
             st.info(msg['no_new_alert'])
-
 else:
-    # 5秒間隔の間は前の情報を表示だけしておく
+    # 5秒経過しないときは前の情報だけ表示
     if st.session_state.last_earthquake_title:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
