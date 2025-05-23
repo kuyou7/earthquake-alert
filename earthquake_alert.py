@@ -5,7 +5,7 @@ from gtts import gTTS
 import streamlit as st
 import time
 
-# メッセージ記書
+# メッセージ辞書
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -15,15 +15,16 @@ messages = {
         'next_action': "次の行動",
         'actions': {
             1: "安全を確保してください。テーブルや丈夫な物の下に隠れてください。",
-            2: "振れが終わったら、遠離線を確認し、落下物に注意してください。",
-            3: "必要に応じて遠離を開始してください。周囲の安全を確認してください。また、ガス管を絶ち、必要であればブレーカーを落としてください。",
+            2: "揺れが収まったら、避難ルートを確認し、落下物に注意してください。",
+            3: "必要に応じて避難を開始してください。周囲の安全を確認してください。また、ガス栓を締め、必要であればブレーカーを落としてください。",
         },
         'all_actions_done': "全ての行動指示が完了しました。",
         'no_new_alert': "新しい地震速報なし",
         'fetch_error': "地震情報を取得できませんでした",
         'excluded_alert': "取得しましたが対象外: ",
         'toggle_button': "English / 日本語切替",
-        'no_action': "行動指示がありません。"
+        'no_action': "行動指示がありません。",
+        'no_earthquake_detected': "地震は確認されませんでした。"
     },
     'en': {
         'title': "Earthquake Alert App",
@@ -41,7 +42,8 @@ messages = {
         'fetch_error': "Could not fetch earthquake information",
         'excluded_alert': "Fetched but excluded: ",
         'toggle_button': "English / 日本語 Toggle",
-        'no_action': "No action instructions."
+        'no_action': "No action instructions.",
+        'no_earthquake_detected': "No earthquakes detected."
     }
 }
 
@@ -99,25 +101,24 @@ def toggle_language():
 
 # UI表示
 st.title(msg['title'])
-st.write(msg['description'])
 
-# 言語切替ボタン
+# 言語切替ボタン（ここでのみst.experimental_rerun呼び出し）
 if st.button(msg['toggle_button']):
     toggle_language()
-    st.rerun()
+    st.experimental_rerun()
 
-# 通知許可ボタン
+# 通知許可ボタン（ダミー表示）
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
 
-# 地震情報の更新
+# 5秒間隔の地震情報更新処理
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
     st.session_state.last_update_time = current_time
     title, link, pubDate, description = fetch_latest_earthquake_info()
 
     if title is None:
-        st.warning(msg['fetch_error'])
+        st.warning(msg['no_earthquake_detected'])
     else:
         if title != st.session_state.last_earthquake_title:
             if "震度速報" in title or "震源情報" in title:
@@ -144,4 +145,4 @@ else:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
     else:
-        st.write(msg['description'])
+        st.warning(msg['no_earthquake_detected'])
