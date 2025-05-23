@@ -3,6 +3,7 @@ import requests
 import xml.etree.ElementTree as ET
 from gtts import gTTS
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 # 言語ごとのメッセージ辞書
 messages = {
@@ -58,27 +59,26 @@ if 'last_earthquake_title' not in st.session_state:
 # 言語切替関数
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
-    # 行動ステップもリセットしたい場合はここでリセット可能
-    # st.session_state.current_step = 1
 
-# 言語切替ボタン（key付き）
-msg = messages[st.session_state.lang]
-if st.button(msg['toggle_button'], key='toggle_lang'):
-    toggle_language()
+# 自動更新設定（5秒ごと）
+st_autorefresh(interval=5 * 1000, key="earthquake_refresh")
 
-# メッセージを再取得（切り替わった後用）
 msg = messages[st.session_state.lang]
 actions = msg['actions']
+
+# 言語切替ボタン
+if st.button(msg['toggle_button'], key='toggle_lang'):
+    toggle_language()
+    st.experimental_rerun()  # 言語切替時に即時更新
 
 # ページ表示
 st.title(msg['title'])
 st.write(msg['description'])
 
-# 通知許可ボタン（key付き）
+# 通知許可ボタン
 if st.button(msg['notify_button'], key='notify_button'):
     st.write(msg['notify_enabled'])
 
-# 地震速報取得関数
 def fetch_latest_earthquake_info():
     try:
         response = requests.get(JMA_EARTHQUAKE_FEED_URL)
@@ -94,7 +94,6 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
-# 次の行動へ進む
 def next_step():
     if st.session_state.current_step < 3:
         st.session_state.current_step += 1
@@ -109,7 +108,6 @@ def next_step():
     st.audio("action.mp3", autoplay=True)
     st.write(action_message)
 
-# 地震速報アラート表示関数
 def alert_user(title, link, description):
     action_message = actions.get(st.session_state.current_step, "No action instructions." if st.session_state.lang == 'en' else "行動指示がありません。")
 
@@ -126,7 +124,7 @@ def alert_user(title, link, description):
     if st.button(msg['next_action'], key='next_action'):
         next_step()
 
-# 1回だけ地震速報を取得・表示（無限ループは避ける）
+# 地震速報1回取得
 title, link, pubDate, description = fetch_latest_earthquake_info()
 
 if title:
