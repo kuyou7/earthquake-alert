@@ -21,6 +21,7 @@ messages = {
         'no_new_alert': "新しい地震速報なし",
         'fetch_error': "地震情報を取得できませんでした",
         'excluded_alert': "取得しましたが対象外: ",
+        'toggle_button': "English / 日本語切替"
     },
     'en': {
         'title': "Earthquake Alert App",
@@ -37,6 +38,7 @@ messages = {
         'no_new_alert': "No new earthquake alerts",
         'fetch_error': "Could not fetch earthquake information",
         'excluded_alert': "Fetched but excluded: ",
+        'toggle_button': "English / 日本語 Toggle"
     }
 }
 
@@ -56,15 +58,19 @@ if 'last_earthquake_title' not in st.session_state:
 # 言語切替関数
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
+    # 行動ステップもリセットしたい場合はここでリセット可能
+    # st.session_state.current_step = 1
 
-# 言語切替ボタン（key付きで重複防止）
-if st.button("English / 日本語切替", key='toggle_lang'):
+# 言語切替ボタン（key付き）
+msg = messages[st.session_state.lang]
+if st.button(msg['toggle_button'], key='toggle_lang'):
     toggle_language()
 
+# メッセージを再取得（切り替わった後用）
 msg = messages[st.session_state.lang]
 actions = msg['actions']
 
-# タイトル・説明
+# ページ表示
 st.title(msg['title'])
 st.write(msg['description'])
 
@@ -97,7 +103,6 @@ def next_step():
 
     action_message = actions.get(st.session_state.current_step, "No action instructions." if st.session_state.lang == 'en' else "行動指示がありません。")
 
-    # 音声読み上げ
     tts = gTTS(text=action_message, lang='en' if st.session_state.lang == 'en' else 'ja')
     tts.save("action.mp3")
 
@@ -118,7 +123,6 @@ def alert_user(title, link, description):
     st.write(link)
     st.write(action_message)
 
-    # 「次の行動」ボタン（key付き）
     if st.button(msg['next_action'], key='next_action'):
         next_step()
 
