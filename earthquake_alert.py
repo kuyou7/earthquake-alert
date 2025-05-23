@@ -5,7 +5,7 @@ from gtts import gTTS
 import streamlit as st
 import time
 
-# メッセージ辞書
+# メッセージ辞書（日本語・英語）
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -58,15 +58,10 @@ if 'last_update_time' not in st.session_state:
 msg = messages[st.session_state.lang]
 actions = msg['actions']
 
-# 言語切替関数（再読み込みは関数外で）
-def toggle_language():
-    st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
-    st.session_state.current_step = 1
-    st.session_state.last_earthquake_title = ""
-
 # 地震情報取得URL
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
+# 地震速報取得関数
 def fetch_latest_earthquake_info():
     try:
         response = requests.get(JMA_EARTHQUAKE_FEED_URL, timeout=5)
@@ -84,12 +79,14 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
+# 行動ステップを進める関数
 def next_step():
     if st.session_state.current_step < 3:
         st.session_state.current_step += 1
     else:
         st.info(msg['all_actions_done'])
 
+# テキストを音声再生する関数
 def speak_text(text):
     try:
         lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
@@ -99,7 +96,13 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
-# UI表示
+# 言語切替関数（再読み込みは呼び出し元で）
+def toggle_language():
+    st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
+    st.session_state.current_step = 1
+    st.session_state.last_earthquake_title = ""
+
+# --- UI表示 ---
 
 st.title(msg['title'])
 st.write(msg['description'])
@@ -107,13 +110,13 @@ st.write(msg['description'])
 # 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
-    st.experimental_rerun()
+    st.experimental_rerun()  # ★ここはイベント処理内なのでOK
 
-# 通知許可ボタン（今はダミー）
+# 通知許可ボタン（今は動作ダミー）
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
 
-# 5秒ごとに地震情報を更新
+# 5秒ごとに地震情報を取得して表示
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
     st.session_state.last_update_time = current_time
@@ -143,7 +146,7 @@ if current_time - st.session_state.last_update_time > 5:
         else:
             st.info(msg['no_new_alert'])
 else:
-    # 5秒経ってなければ前の情報だけ表示
+    # 5秒経っていなければ、直前の情報表示
     if st.session_state.last_earthquake_title:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
