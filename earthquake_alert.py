@@ -8,6 +8,7 @@ messages = {
         'title': "地震速報アプリ",
         'description': "行動指示を順に表示していきます",
         'next_action': "次の行動へ",
+        'restart': "最初に戻る",
         'actions': {
             1: "安全を確保してください。テーブルや丈夫な物の下に隠れてください。",
             2: "揺れが収まったら、避難ルートを確認し、落下物に注意してください。",
@@ -21,6 +22,7 @@ messages = {
         'title': "Earthquake Alert App",
         'description': "Action instructions will be shown step by step.",
         'next_action': "Next Action",
+        'restart': "Restart from Step 1",
         'actions': {
             1: "Ensure your safety. Take cover under a sturdy table or object.",
             2: "After shaking stops, check evacuation routes and beware of falling objects.",
@@ -64,6 +66,10 @@ def next_step():
     else:
         st.info(msg['all_actions_done'])
 
+# 最初に戻る
+def restart():
+    st.session_state.current_step = 1
+
 # タイトルと説明
 st.title(msg['title'])
 st.write(msg['description'])
@@ -73,15 +79,23 @@ if st.button(msg['toggle_button']):
     toggle_language()
     st.rerun()
 
-# 現在の行動ステップ表示
-action_message = actions.get(st.session_state.current_step, msg['no_action'])
-st.markdown(f"### 🧭 行動ステップ {st.session_state.current_step}")
-st.write(f"**{action_message}**")
+# ステップ表示のプレースホルダを用意
+step_placeholder = st.empty()
 
-# 次へボタンと音声再生
-if st.button(msg['next_action']):
-    next_step()
+# 現在の行動ステップ表示（毎回上書き）
+with step_placeholder.container():
     action_message = actions.get(st.session_state.current_step, msg['no_action'])
     st.markdown(f"### 🧭 行動ステップ {st.session_state.current_step}")
     st.write(f"**{action_message}**")
     speak_text(action_message)
+
+    # 次へ or 最初に戻る
+    if st.session_state.current_step < 3:
+        if st.button(msg['next_action']):
+            next_step()
+            st.rerun()
+    else:
+        st.success(msg['all_actions_done'])
+        if st.button(msg['restart']):
+            restart()
+            st.rerun()
