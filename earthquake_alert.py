@@ -47,7 +47,7 @@ messages = {
     }
 }
 
-# 初期化
+# セッション状態の初期化
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ja'
 if 'current_step' not in st.session_state:
@@ -99,24 +99,34 @@ def toggle_language():
     st.session_state.current_step = 1
     st.session_state.last_earthquake_title = ""
 
-# UI表示
+# タイトル
 st.title(msg['title'])
 
-# 言語切替ボタン
+# 言語切替
 if st.button(msg['toggle_button']):
     toggle_language()
     st.rerun()
 
-# 通知許可ボタン
+# 通知許可
 if st.button(msg['notify_button']):
     st.success(msg['notify_enabled'])
 
-# 地震情報表示領域
-quake_displayed = False
+# ✅ 行動ステップ常時表示
+st.markdown(f"### 🧭 {msg['next_action']}")
+action_message = actions.get(st.session_state.current_step, msg['no_action'])
+st.write(f"**{action_message}**")
+speak_text(action_message)
 
-# 5秒間隔の地震情報更新処理
+if st.button(msg['next_action']):
+    next_step()
+    action_message = actions.get(st.session_state.current_step, msg['no_action'])
+    speak_text(action_message)
+    st.write(action_message)
+
+# ✅ 地震情報も引き続き表示（任意）
+quake_displayed = False
 current_time = time.time()
-if current_time - st.session_state.last_update_time > 5:
+if current_time - st.session_state.last_update_time > 10:
     st.session_state.last_update_time = current_time
     title, link, pubDate, description = fetch_latest_earthquake_info()
 
@@ -126,31 +136,19 @@ if current_time - st.session_state.last_update_time > 5:
         if title != st.session_state.last_earthquake_title:
             if "震度速報" in title or "震源情報" in title:
                 st.session_state.last_earthquake_title = title
-                action_message = actions.get(st.session_state.current_step, msg['no_action'])
-
                 st.markdown(f"### ⚡ {title}")
                 st.write(description)
                 st.write(f"[詳細リンク]({link})")
-                st.write(f"**{action_message}**")
-                speak_text(action_message)
                 quake_displayed = True
-
-                if st.button(msg['next_action']):
-                    next_step()
-                    action_message = actions.get(st.session_state.current_step, msg['no_action'])
-                    speak_text(action_message)
-                    st.write(action_message)
             else:
                 st.info(msg['excluded_alert'] + title)
         else:
             st.info(msg['no_new_alert'])
 else:
-    # 5秒経っていないとき
     if st.session_state.last_earthquake_title:
         st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
         st.write("最新の地震情報を監視中...")
         quake_displayed = True
 
-# 表示されていなければ説明文または「確認されませんでした」表示
 if not quake_displayed:
     st.write(msg['no_quake'])
