@@ -25,7 +25,8 @@ messages = {
         'fetch_error': "地震情報を取得できませんでした",
         'excluded_alert': "取得しましたが対象外: ",
         'toggle_button': "English / 日本語切替",
-        'no_action': "行動指示がありません。"
+        'no_action': "行動指示がありません。",
+        'action_step_label': "行動ステップ"
     },
     'en': {
         'title': "Earthquake Alert App",
@@ -45,7 +46,8 @@ messages = {
         'fetch_error': "Could not fetch earthquake information",
         'excluded_alert': "Fetched but excluded: ",
         'toggle_button': "English / 日本語 Toggle",
-        'no_action': "No action instructions."
+        'no_action': "No action instructions.",
+        'action_step_label': "Action Step"
     }
 }
 
@@ -64,6 +66,7 @@ actions = msg['actions']
 
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
+# 地震情報取得関数
 def fetch_latest_earthquake_info():
     try:
         response = requests.get(JMA_EARTHQUAKE_FEED_URL, timeout=5)
@@ -81,6 +84,7 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
+# 音声再生関数
 def speak_text(text):
     try:
         lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
@@ -90,20 +94,22 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
+# 言語切替関数
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
     st.rerun()
 
-# UI
+# UIスタート
 st.title(msg['title'])
 
+# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
 
 # 行動ステップの表示
 if st.session_state.current_step <= 3:
     action_message = actions.get(st.session_state.current_step, msg['no_action'])
-    st.subheader(f"🧭 行動ステップ {st.session_state.current_step}")
+    st.subheader(f"🧭 {msg['action_step_label']} {st.session_state.current_step}")
     st.write(action_message)
     speak_text(action_message)
 
@@ -114,7 +120,7 @@ elif st.button(msg['reset_action']):
     st.session_state.current_step = 1
     st.rerun()
 
-# 地震情報の表示（常時表示）
+# 地震情報の表示（常時）
 quake_displayed = False
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
@@ -136,7 +142,7 @@ if current_time - st.session_state.last_update_time > 5:
         else:
             st.info(msg['no_new_alert'])
 
-# 最新情報の保持
+# 前回の地震情報の再表示
 if not quake_displayed and st.session_state.last_earthquake_title:
     st.markdown(f"### ⚡ {st.session_state.last_earthquake_title}")
     st.write("最新の地震情報を監視中...")
