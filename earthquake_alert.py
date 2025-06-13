@@ -63,7 +63,6 @@ if 'last_update_time' not in st.session_state:
 
 msg = messages[st.session_state.lang]
 actions = msg['actions']
-
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
 # 地震情報取得関数
@@ -84,7 +83,7 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
-# 音声再生関数
+# 音声読み上げ（行動ステップ）
 def speak_text(text):
     try:
         lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
@@ -93,6 +92,18 @@ def speak_text(text):
         st.audio("action.mp3", autoplay=True)
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
+
+# 警報音の再生
+def play_alert_sound():
+    try:
+        st.audio("alert.mp3", autoplay=True)
+    except Exception as e:
+        st.error(f"警報音の再生に失敗しました: {e}")
+
+# 震度4以上の判定
+def is_significant_earthquake(title):
+    keywords = ["震度4", "震度5", "震度6", "震度7"]
+    return any(level in title for level in keywords)
 
 # 言語切替関数
 def toggle_language():
@@ -120,7 +131,7 @@ elif st.button(msg['reset_action']):
     st.session_state.current_step = 1
     st.rerun()
 
-# 地震情報の表示（常時）
+# 地震情報の表示（常時監視）
 quake_displayed = False
 current_time = time.time()
 if current_time - st.session_state.last_update_time > 5:
@@ -136,6 +147,11 @@ if current_time - st.session_state.last_update_time > 5:
                 st.markdown(f"### ⚡ {title}")
                 st.write(description)
                 st.write(f"[詳細リンク]({link})")
+
+                # 🚨 震度4以上なら警報音を再生
+                if is_significant_earthquake(title):
+                    play_alert_sound()
+
                 quake_displayed = True
             else:
                 st.info(msg['excluded_alert'] + title)
@@ -148,3 +164,4 @@ if not quake_displayed and st.session_state.last_earthquake_title:
     st.write("最新の地震情報を監視中...")
 elif not quake_displayed:
     st.write(msg['no_quake'])
+
