@@ -5,7 +5,6 @@ from gtts import gTTS
 import streamlit as st
 import time
 
-# メッセージ辞書（多言語対応）
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -53,7 +52,6 @@ messages = {
     }
 }
 
-# 初期化
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ja'
 
@@ -78,7 +76,6 @@ if 'simulated_quake' not in st.session_state:
 
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
-# 地震情報取得関数
 def fetch_latest_earthquake_info():
     try:
         response = requests.get(JMA_EARTHQUAKE_FEED_URL, timeout=5)
@@ -96,7 +93,6 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
-# 音声読み上げ
 def speak_text(text):
     try:
         lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
@@ -106,31 +102,25 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
-# 警報音再生
 def play_alert_sound():
     try:
         st.audio("alert.mp3", autoplay=True)
     except Exception as e:
         st.error(f"警報音の再生に失敗しました: {e}")
 
-# 震度4以上の判定
 def is_significant_earthquake(title):
     keywords = ["震度4", "震度5", "震度6", "震度7"]
     return any(level in title for level in keywords)
 
-# 言語切替
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
     st.experimental_rerun()
 
-# UI開始
 st.title(msg['title'])
 
-# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
 
-# 行動ステップ表示
 if st.session_state.current_step <= 3:
     step_msg = acts.get(st.session_state.current_step, msg['no_action'])
     st.subheader(f"🧭 {msg['action_step_label']} {st.session_state.current_step}")
@@ -140,18 +130,17 @@ if st.session_state.current_step <= 3:
     if st.button(msg['next_action']):
         st.session_state.current_step += 1
         st.experimental_rerun()
-    elif st.button(msg['reset_action']):
+
+    if st.button(msg['reset_action']):
         st.session_state.current_step = 1
         st.experimental_rerun()
 
-# 模擬地震ボタン（訓練用）
 if st.button(msg['simulate_quake']):
     st.session_state.simulated_quake = True
     st.session_state.last_earthquake_title = "震度5弱：訓練地震"
     play_alert_sound()
     st.experimental_rerun()
 
-# 地震情報の監視と表示（5秒おき）
 quake_displayed = False
 current_time = time.time()
 
