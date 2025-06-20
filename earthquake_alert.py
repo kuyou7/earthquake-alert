@@ -5,6 +5,7 @@ from gtts import gTTS
 import streamlit as st
 import time
 
+# メッセージ辞書（多言語対応）
 messages = {
     'ja': {
         'title': "地震速報アプリ",
@@ -14,7 +15,6 @@ messages = {
         'notify_enabled': "通知が有効になりました！",
         'next_action': "次の行動",
         'reset_action': "最初からやり直す",
-        'simulate_quake': "🔁 模擬地震を発生させる",
         'actions': {
             1: "安全を確保してください。テーブルや丈夫な物の下に隠れてください。",
             2: "揺れが収まったら、避難ルートを確認し、落下物に注意してください。",
@@ -36,7 +36,6 @@ messages = {
         'notify_enabled': "Notifications have been enabled!",
         'next_action': "Next Action",
         'reset_action': "Restart",
-        'simulate_quake': "🔁 Simulate Earthquake",
         'actions': {
             1: "Ensure your safety. Take cover under a sturdy table or object.",
             2: "After shaking stops, check evacuation routes and beware of falling objects.",
@@ -52,30 +51,21 @@ messages = {
     }
 }
 
+# 初期化
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ja'
-
-msg = messages.get(st.session_state.lang)
-if msg is None:
-    st.error(f"言語 '{st.session_state.lang}' のメッセージが見つかりません。")
-    st.stop()
-
-acts = msg.get('actions')
-if acts is None:
-    st.error(f"言語 '{st.session_state.lang}' に 'actions' がありません。")
-    st.stop()
-
 if 'current_step' not in st.session_state:
     st.session_state.current_step = 1
 if 'last_earthquake_title' not in st.session_state:
     st.session_state.last_earthquake_title = ""
 if 'last_update_time' not in st.session_state:
     st.session_state.last_update_time = 0
-if 'simulated_quake' not in st.session_state:
-    st.session_state.simulated_quake = False
 
+msg = messages[st.session_state.lang]
+actions = msg['actions']
 JMA_EARTHQUAKE_FEED_URL = "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml"
 
+# 地震情報取得関数
 def fetch_latest_earthquake_info():
     try:
         response = requests.get(JMA_EARTHQUAKE_FEED_URL, timeout=5)
@@ -93,6 +83,7 @@ def fetch_latest_earthquake_info():
         print(f"地震情報取得失敗: {e}")
         return None, None, None, None
 
+# 音声読み上げ（行動ステップ）
 def speak_text(text):
     try:
         lang_code = 'en' if st.session_state.lang == 'en' else 'ja'
@@ -102,76 +93,72 @@ def speak_text(text):
     except Exception as e:
         st.error(f"音声再生に失敗しました: {e}")
 
+# 警報音の再生
 def play_alert_sound():
     try:
         st.audio("alert.mp3", autoplay=True)
     except Exception as e:
         st.error(f"警報音の再生に失敗しました: {e}")
 
+# 震度4以上の判定
 def is_significant_earthquake(title):
     keywords = ["震度4", "震度5", "震度6", "震度7"]
     return any(level in title for level in keywords)
 
+# 言語切替関数
 def toggle_language():
     st.session_state.lang = 'en' if st.session_state.lang == 'ja' else 'ja'
-    st.experimental_rerun()
+    st.rerun()
 
+# UIスタート
 st.title(msg['title'])
 
+# 言語切替ボタン
 if st.button(msg['toggle_button']):
     toggle_language()
 
+# 行動ステップの表示
 if st.session_state.current_step <= 3:
-    step_msg = acts.get(st.session_state.current_step, msg['no_action'])
+    action_message = actions.get(st.session_state.current_step, msg['no_action'])
     st.subheader(f"🧭 {msg['action_step_label']} {st.session_state.current_step}")
-    st.write(step_msg)
-    speak_text(step_msg)
+    st.write(action_message)
+    speak_text(action_message)
 
     if st.button(msg['next_action']):
         st.session_state.current_step += 1
-        st.experimental_rerun()
+        st.rerun()
+elif st.button(msg['reset_action']):
+    st.session_state.current_step = 1
+    st.rerun()
 
-    if st.button(msg['reset_action']):
-        st.session_state.current_step = 1
-        st.experimental_rerun()
-
-if st.button(msg['simulate_quake']):
-    st.session_state.simulated_quake = True
-    st.session_state.last_earthquake_title = "震度5弱：訓練地震"
-    play_alert_sound()
-    st.experimental_rerun()
-
+# 地震情報の表示（常時監視）
 quake_displayed = False
 current_time = time.time()
-
 if current_time - st.session_state.last_update_time > 5:
     st.session_state.last_update_time = current_time
+    title, link, pubDate, description = fetch_latest_earthquake_info()
 
-    if st.session_state.simulated_quake:
-        st.markdown("### ⚡ 訓練用地震発生！")
-        st.write("これは訓練です。震度5弱の揺れを想定しています。")
-        st.write("適切な避難行動を取ってください。")
-        st.session_state.simulated_quake = False
-        quake_displayed = True
+    if title is None:
+        st.warning(msg['fetch_error'])
     else:
-        title, link, pubDate, description = fetch_latest_earthquake_info()
-        if title is None:
-            st.warning(msg['fetch_error'])
-        else:
-            if title != st.session_state.last_earthquake_title:
-                if "震度速報" in title or "震源情報" in title:
-                    st.session_state.last_earthquake_title = title
-                    st.markdown(f"### ⚡ {title}")
-                    st.write(description)
-                    st.write(f"[詳細リンク]({link})")
-                    if is_significant_earthquake(title):
-                        play_alert_sound()
-                    quake_displayed = True
-                else:
-                    st.info(msg['excluded_alert'] + title)
-            else:
-                st.info(msg['no_new_alert'])
+        if title != st.session_state.last_earthquake_title:
+            if "震度速報" in title or "震源情報" in title:
+                st.session_state.last_earthquake_title = title
+                st.markdown(f"### ⚡ {title}")
+                st.write(description)
+                st.write(f"[詳細リンク]({link})")
 
+                # 🚨 震度4以上なら警報音を再生
+                if is_significant_earthquake(title):
+                    play_alert_sound()
+
+                quake_displayed = True
+            else:
+                st.info(msg['excluded_alert'] + title)
+        else:
+            st.info(msg['no_new_alert'])
+
+# 前回の地震情報の再表示
 if not quake_displayed and st.session_state.last_earthquake_title:
     st.write("最新の地震情報を監視中...")
 elif not quake_displayed:
